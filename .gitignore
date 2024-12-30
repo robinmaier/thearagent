@@ -9,3 +9,4 @@ venv/
 # Audio Files
 audio_input/
 audio_output/
+analyze_audio_output/
