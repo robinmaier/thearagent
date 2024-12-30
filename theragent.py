@@ -200,7 +200,9 @@ def generate_response():
             ]
         )
         
-        response_text = completion.choices[0].message.content
+
+        # Text-Antwort speichern
+        response_text = completion.choices[0].message.audio.transcript
         print("\nTherapist response:", response_text)
         
         # Audio-Antwort speichern
@@ -219,7 +221,6 @@ def generate_response():
         
     except Exception as e:
         print(f"Fehler: {str(e)}")
-
 
 
 
