@@ -6,6 +6,7 @@ import os
 import pyaudio
 import wave
 from datetime import datetime
+import json
 
 
 # .env Datei laden
@@ -33,7 +34,7 @@ def record_audio():
                    input=True,
                    frames_per_buffer=CHUNK)
 
-    print("\nAufnahme läuft... Drücke Enter zum Stoppen.")
+    print("\nAufnahme läuft... Drücke CTRL+C zum Stoppen.")
     
     frames = []
     
@@ -104,12 +105,25 @@ def validate_wav(file_path):
         print(f"Ungültiges WAV-Format: {str(e)}")
         return False
 
+def save_analysis(analysis, input_file):
+    output_dir = "analyze_audio_output"
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_file = f"{output_dir}/{Path(input_file).stem}_analysis_{timestamp}.json"
+    
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump({
+            "timestamp": timestamp,
+            "input_file": str(input_file),
+            "analysis": analysis
+        }, f, ensure_ascii=False, indent=2)
+    return output_file
+
+
 def analyze_audio():
     print("Starte Audio-Analyse...")
-    file_path = "audio_input/test.wav"
     
     try:
-
 # Neueste Aufnahme finden
         file_path = get_latest_recording()
         print(f"Versuche Datei zu öffnen: {file_path}")
@@ -147,7 +161,9 @@ def analyze_audio():
         # Ergebnis ausgeben
         response = completion.choices[0].message.content
         print(response)
-
+        output_file = save_analysis(response, file_path)
+        print(f"Analyse wurde gespeichert als: {output_file}")
+        
     except FileNotFoundError:
         print(f"Fehler: Die Datei wurde nicht gefunden. Bitte stellen Sie sicher, dass {file_path} existiert.")
     except Exception as e:
