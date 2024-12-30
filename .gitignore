@@ -10,3 +10,4 @@ venv/
 audio_input/
 audio_output/
 analyze_audio_output/
+therapist_output/

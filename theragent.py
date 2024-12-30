@@ -25,7 +25,7 @@ def record_audio():
     # PyAudio Objekt erstellen
     p = pyaudio.PyAudio()
     
-    input("Drücke Enter um die Aufnahme zu starten...")
+    input("Willkommen bei TherAgent. Über was möchtest du gerne sprechen? Drücke Enter um die Aufnahme zu starten...")
     
     # Aufnahme-Stream öffnen
     stream = p.open(format=FORMAT,
@@ -163,13 +163,68 @@ def analyze_audio():
         print(response)
         output_file = save_analysis(response, file_path)
         print(f"Analyse wurde gespeichert als: {output_file}")
-        
+
     except FileNotFoundError:
         print(f"Fehler: Die Datei wurde nicht gefunden. Bitte stellen Sie sicher, dass {file_path} existiert.")
     except Exception as e:
         print(f"Ein Fehler ist aufgetreten: {str(e)}")
 
+def get_latest_analysis():
+    analysis_files = list(Path("analyze_audio_output").glob("*.json"))
+    if not analysis_files:
+        raise FileNotFoundError("Keine Analyse-Dateien gefunden")
+    latest_file = max(analysis_files, key=lambda x: x.stat().st_mtime)
+    
+    with open(latest_file, 'r', encoding='utf-8') as f:
+        return json.load(f)
+    
+def generate_response():
+    try:
+        # Letzte Analyse laden
+        analysis = get_latest_analysis()
+        
+        # Therapeuten-Antwort mit Audio generieren
+        completion = client.chat.completions.create(
+            model="gpt-4o-audio-preview",
+            modalities=["text", "audio"],
+            audio={"voice": "alloy", "format": "wav"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Versetze dich in die Rolle eines Psychotherapeuten und reagiere mit einer kurzen Antwort, um das Gespräch fortzuführen"
+                },
+                {
+                    "role": "user",
+                    "content": f"Basierend auf dieser Analyse: {analysis['analysis']}"
+                }
+            ]
+        )
+        
+        response_text = completion.choices[0].message.content
+        print("\nTherapist response:", response_text)
+        
+        # Audio-Antwort speichern
+        output_dir = "therapist_output"
+        os.makedirs(output_dir, exist_ok=True)
+        timestamp = Path(analysis['input_file']).stem
+        output_file = f"{output_dir}/response_{timestamp}.wav"
+        
+        # WAV-Datei aus base64 decodieren und speichern
+        wav_bytes = base64.b64decode(completion.choices[0].message.audio.data)
+        with open(output_file, "wb") as f:
+            f.write(wav_bytes)
+            
+        print(f"\nAudio-Antwort gespeichert in: {output_file}")
+        return output_file
+        
+    except Exception as e:
+        print(f"Fehler: {str(e)}")
+
+
+
+
 if __name__ == "__main__":
     print("Programm startet")
     record_audio()
     analyze_audio()
+    generate_response()
